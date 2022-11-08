@@ -146,15 +146,6 @@ func contextFields(ctx context.Context) *mergedFields {
 	return f.(*mergedFields)
 }
 
-func (f *mergedFields) merge(dest map[string]any) {
-	if f.parent != nil {
-		f.parent.merge(dest)
-	}
-	for k, v := range f.fields {
-		dest[k] = v
-	}
-}
-
 func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, msg string, fields Fields) error {
 	if level < l.Level() {
 		return nil
@@ -165,37 +156,6 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	state := l.pool.Get().(*encodeState)
 	defer l.pool.Put(state)
 	state.Reset()
-
-	// build the fields
-	f := make(map[string]any)
-	if parent := contextFields(ctx); parent != nil {
-		parent.merge(f)
-	}
-	for k, v := range fields {
-		f[k] = v
-	}
-
-	if t, ok := f["time"]; ok {
-		f["field.time"] = t
-		delete(f, "time")
-	}
-
-	if lv, ok := f["level"]; ok {
-		f["level"] = lv
-		delete(f, "level")
-	}
-	if v, ok := f["file"]; ok {
-		f["field.file"] = v
-		delete(f, "file")
-	}
-	if v, ok := f["line"]; ok {
-		f["field.line"] = v
-		delete(f, "line")
-	}
-	if msg, ok := f["message"]; ok {
-		f["field.message"] = msg
-		delete(f, "message")
-	}
 
 	state.WriteByte('{')
 
@@ -252,6 +212,8 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 		state.WriteByte(':')
 		state.appendInt(int64(line))
 	}
+
+	state.appendFields(contextFields(ctx), fields)
 
 	state.WriteByte('}')
 	state.WriteByte('\n')

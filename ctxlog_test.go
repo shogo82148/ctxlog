@@ -5,39 +5,41 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 )
 
-// func TestFormatTime(t *testing.T) {
-// 	tests := []struct {
-// 		flag int
-// 		now  time.Time
-// 		want string
-// 	}{
-// 		{
-// 			flag: Ldate | LUTC,
-// 			now:  time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC),
-// 			want: "2001-02-03Z",
-// 		},
-// 		{
-// 			flag: Ldate | Ltime | LUTC,
-// 			now:  time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC),
-// 			want: "2001-02-03T04:05:06Z",
-// 		},
-// 		{
-// 			flag: Ldate | Lmicroseconds | LUTC,
-// 			now:  time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC),
-// 			want: "2001-02-03T04:05:06.123456Z",
-// 		},
-// 	}
+func TestFormatTime(t *testing.T) {
+	tests := []struct {
+		flag int
+		now  time.Time
+		want string
+	}{
+		{
+			flag: Ldate | LUTC,
+			now:  time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC),
+			want: "2001-02-03Z",
+		},
+		{
+			flag: Ldate | Ltime | LUTC,
+			now:  time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC),
+			want: "2001-02-03T04:05:06Z",
+		},
+		{
+			flag: Ldate | Lmicroseconds | LUTC,
+			now:  time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC),
+			want: "2001-02-03T04:05:06.123456Z",
+		},
+	}
 
-// 	for i, tt := range tests {
-// 		l := New(io.Discard, "", tt.flag)
-// 		got := l.formatTime(tt.now)
-// 		if got != tt.want {
-// 			t.Errorf("%d: got %q, want %q", i, got, tt.want)
-// 		}
-// 	}
-// }
+	for i, tt := range tests {
+		e := new(encodeState)
+		e.appendTime(tt.flag, tt.now)
+		got := e.String()
+		if got != tt.want {
+			t.Errorf("%d: got %q, want %q", i, got, tt.want)
+		}
+	}
+}
 
 func TestOutput(t *testing.T) {
 	buf := new(bytes.Buffer)
@@ -97,13 +99,14 @@ func BenchmarkStackTrace(b *testing.B) {
 	})
 }
 
-// func BenchmarkFormatTime(b *testing.B) {
-// 	l := New(discard, "", Ldate|Ltime|Lmicroseconds|LUTC)
-// 	now := time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC)
-// 	for i := 0; i < b.N; i++ {
-// 		l.formatTime(now)
-// 	}
-// }
+func BenchmarkFormatTime(b *testing.B) {
+	e := new(encodeState)
+	now := time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC)
+	for i := 0; i < b.N; i++ {
+		e.Reset()
+		e.appendTime(Ldate|Ltime|Lmicroseconds|LUTC, now)
+	}
+}
 
 func BenchmarkPrintln(b *testing.B) {
 	const testString = "test"

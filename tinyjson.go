@@ -3,13 +3,28 @@ package ctxlog
 import (
 	"bytes"
 	"encoding/json"
+	"sort"
 	"strconv"
 	"time"
 )
 
+var reservedFields = []string{
+	"time",
+	"level",
+	"file",
+	"line",
+	"message",
+}
+
+type keyValue struct {
+	key   string
+	value any
+}
+
 type encodeState struct {
 	bytes.Buffer // accumulated output
 	scratch      [64]byte
+	kv           []keyValue
 }
 
 func (e *encodeState) appendRawString(v string) {
@@ -56,6 +71,14 @@ func (e *encodeState) appendString(v string) {
 	e.WriteByte('"')
 	e.appendRawString(v)
 	e.WriteByte('"')
+}
+
+func (e *encodeState) appendBool(v bool) {
+	if v {
+		e.WriteString("true")
+	} else {
+		e.WriteString("false")
+	}
 }
 
 func (e *encodeState) appendInt(v int64) {
@@ -123,11 +146,76 @@ func (e *encodeState) appendTime(flags int, t time.Time) {
 	e.Write((*b)[:i])
 }
 
-func (e *encodeState) appendAny(buf *bytes.Buffer, v any) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
+func (e *encodeState) appendAny(v any) error {
+	switch v := v.(type) {
+	case int8:
+		e.appendInt(int64(v))
+	case int16:
+		e.appendInt(int64(v))
+	case int32:
+		e.appendInt(int64(v))
+	case int64:
+		e.appendInt(int64(v))
+	case int:
+		e.appendInt(int64(v))
+	case uint8:
+		e.appendUint(uint64(v))
+	case uint16:
+		e.appendUint(uint64(v))
+	case uint32:
+		e.appendUint(uint64(v))
+	case uint64:
+		e.appendUint(uint64(v))
+	case uint:
+		e.appendUint(uint64(v))
+	case string:
+		e.appendString(v)
+	case bool:
+		e.appendBool(v)
+	default:
+		b, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		e.Write(b)
 	}
-	buf.Write(b)
 	return nil
+}
+
+func (e *encodeState) appendFields(parent *mergedFields, fields Fields) {
+	kv := e.kv[:0]
+	for k, v := range fields {
+		kv = append(kv, keyValue{key: k, value: v})
+	}
+	for parent != nil {
+		for k, v := range parent.fields {
+			kv = append(kv, keyValue{key: k, value: v})
+		}
+		parent = parent.parent
+	}
+	sort.SliceStable(kv, func(i, j int) bool { return kv[i].key < kv[j].key })
+
+	for i, pair := range kv {
+		if i > 0 && kv[i-1].key == pair.key {
+			continue
+		}
+		e.WriteByte(',')
+		e.WriteByte('"')
+		for _, k := range reservedFields {
+			if pair.key == k {
+				e.appendRawString("field.")
+				break
+			}
+		}
+		e.appendRawString(pair.key)
+		e.WriteByte('"')
+		e.WriteByte(':')
+		e.appendAny(pair.value)
+	}
+
+	// fill with nil for Garbage Collection
+	for i := range kv {
+		kv[i].value = nil
+	}
+	e.kv = kv
 }
