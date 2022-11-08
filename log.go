@@ -10,14 +10,14 @@ import (
 // compatible layer for the log package
 
 const (
-	Ldate         = 1 << iota     // the date in the local time zone: 2009/01/23
-	Ltime                         // the time in the local time zone: 01:23:23
-	Lmicroseconds                 // microsecond resolution: 01:23:23.123123.  assumes Ltime.
-	Llongfile                     // full file name and line number: /a/b/c/d.go:23
-	Lshortfile                    // final file name element and line number: d.go:23. overrides Llongfile
-	LUTC                          // if Ldate or Ltime is set, use UTC rather than the local time zone
-	Lmsgprefix                    // move the "prefix" from the beginning of the line to before the message
-	LstdFlags     = Ldate | Ltime // initial values for the standard logger
+	Ldate         = 1 << iota                     // the date in the local time zone in RFC3339: 2009-01-23
+	Ltime                                         // the time in the local time zone in RFC3339: 01:23:23
+	Lmicroseconds                                 // microsecond resolution: 01:23:23.123123.  assumes Ltime.
+	Llongfile                                     // full file name and line number: /a/b/c/d.go:23
+	Lshortfile                                    // final file name element and line number: d.go:23. overrides Llongfile
+	LUTC                                          // if Ldate or Ltime is set, use UTC rather than the local time zone
+	Lmsgprefix                                    // move the "prefix" from the beginning of the line to before the message
+	LstdFlags     = Ldate | Ltime | Lmicroseconds // initial values for the standard logger
 )
 
 func (l *Logger) Output(calldepth int, s string) error {
@@ -98,22 +98,34 @@ func (l *Logger) Panicln(v ...any) {
 	panic(s)
 }
 
+// Prefix returns the output prefix for the logger.
 func (l *Logger) Prefix() string {
-	// TODO: implement me
-	return ""
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.prefix
 }
 
+// SetPrefix sets the output prefix for the logger.
 func (l *Logger) SetPrefix(prefix string) {
-	// TODO: implement me
+	l.mu.Lock()
+	defer l.mu.RUnlock()
+	l.prefix = prefix
 }
 
+// Flags returns the output flags for the logger.
+// The flag bits are Ldate, Ltime, and so on.
 func (l *Logger) Flags() int {
-	// TODO: implement me
-	return 0
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.flag
 }
 
+// SetFlags sets the output flags for the logger.
+// The flag bits are Ldate, Ltime, and so on.
 func (l *Logger) SetFlags(flag int) {
-	// TODO: implement me
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.flag = flag
 }
 
 // Output writes the output for a logging event.

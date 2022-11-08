@@ -43,12 +43,34 @@ const (
 	// Values less than TraceLevel are handled as numbers.
 )
 
+func (lv Level) String() string {
+	switch lv {
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelFatal:
+		return "fatal"
+	case LevelPanic:
+		return "panic"
+	case LevelNo:
+		return "no"
+	case LevelDisabled:
+		return "disabled"
+	}
+	return "trace"
+}
+
 type Logger struct {
-	mu        sync.Mutex  // ensures atomic writes; protects the following fields
-	prefix    string      // prefix on each line to identify the logger (but see Lmsgprefix)
-	flag      int         // properties
-	out       io.Writer   // for accumulating text to write
-	isDiscard atomic.Bool // whether out == io.Discard
+	mu        sync.RWMutex // ensures atomic writes; protects the following fields
+	prefix    string       // prefix on each line to identify the logger (but see Lmsgprefix)
+	flag      int          // properties
+	out       io.Writer    // for accumulating text to write
+	isDiscard atomic.Bool  // whether out == io.Discard
 	level     Level
 }
 
@@ -132,7 +154,7 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 		return nil
 	}
 
-	now := time.Now().UTC() // get this early.
+	now := time.Now() // get this early.
 
 	// TODO: build the message
 
@@ -148,12 +170,12 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	if t, ok := f["time"]; ok {
 		f["field.time"] = t
 	}
-	f["time"] = now
+	f["time"] = l.formatTime(now)
 
 	if lv, ok := f["level"]; ok {
 		f["level"] = lv
 	}
-	f["level"] = level
+	f["level"] = level.String()
 
 	if msg, ok := f["message"]; ok {
 		f["field.message"] = msg
@@ -171,6 +193,62 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	defer l.mu.Unlock()
 	_, err = l.out.Write(buf)
 	return err
+}
+
+func (l *Logger) formatTime(t time.Time) string {
+	var buf [30]byte
+	var idx int
+
+	flag := l.Flags()
+	if flag&LUTC != 0 {
+		t = t.UTC()
+	}
+	if flag&Ldate != 0 {
+		year, month, day := t.Date()
+		buf[idx+0] = '0' + byte(year/1000)
+		buf[idx+1] = '0' + byte((year/100)%10)
+		buf[idx+2] = '0' + byte((year/10)%10)
+		buf[idx+3] = '0' + byte(year%10)
+		buf[idx+4] = '-'
+		buf[idx+5] = '0' + byte(month/10)
+		buf[idx+6] = '0' + byte(month%10)
+		buf[idx+7] = '-'
+		buf[idx+8] = '0' + byte(day/10)
+		buf[idx+9] = '0' + byte(day%10)
+		idx += 10
+	}
+	if flag&(Ltime|Lmicroseconds) != 0 {
+		if l.flag&Ldate != 0 {
+			buf[idx] = 'T'
+			idx++
+		}
+		hour, min, sec := t.Clock()
+		buf[idx+0] = '0' + byte(hour/10)
+		buf[idx+1] = '0' + byte(hour%10)
+		buf[idx+2] = ':'
+		buf[idx+3] = '0' + byte(min/10)
+		buf[idx+4] = '0' + byte(min%10)
+		buf[idx+5] = ':'
+		buf[idx+6] = '0' + byte(sec/10)
+		buf[idx+7] = '0' + byte(sec%10)
+		idx += 8
+		if flag&(Lmicroseconds) != 0 {
+			micro := t.Nanosecond() / 1000
+			buf[idx+0] = '.'
+			buf[idx+1] = '0' + byte(micro/100000)
+			buf[idx+2] = '0' + byte((micro/10000)%10)
+			buf[idx+3] = '0' + byte((micro/1000)%10)
+			buf[idx+4] = '0' + byte((micro/100)%10)
+			buf[idx+5] = '0' + byte((micro/10)%10)
+			buf[idx+6] = '0' + byte(micro%10)
+			idx += 7
+		}
+	}
+	if flag&LUTC != 0 {
+		buf[idx] = 'Z'
+		idx++
+	}
+	return string(buf[:idx])
 }
 
 func (l *Logger) Trace(ctx context.Context, msg string, fields Fields) {
