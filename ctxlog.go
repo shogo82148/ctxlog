@@ -2,6 +2,7 @@ package ctxlog
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"sync"
@@ -49,7 +50,6 @@ type Logger struct {
 	out       io.Writer   // for accumulating text to write
 	isDiscard atomic.Bool // whether out == io.Discard
 	level     Level
-	pool      sync.Pool
 }
 
 var std = New(os.Stderr, "", LstdFlags)
@@ -62,12 +62,6 @@ func New(out io.Writer, prefix string, flag int) *Logger {
 		out:    out,
 		prefix: prefix,
 		flag:   flag,
-		pool: sync.Pool{
-			New: func() any {
-				buf := make([]byte, 0, 1024)
-				return &buf
-			},
-		},
 	}
 }
 
@@ -120,12 +114,59 @@ func contextFields(ctx context.Context) *mergedFields {
 	return ctx.Value(keyFields).(*mergedFields)
 }
 
-func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, msg string, fields Fields) error {
-	now := time.Now() // get this early.
-	_ = now
+func (f *mergedFields) merge(dest map[string]any) {
+	if f.parent != nil {
+		f.parent.merge(dest)
+	}
+	for k, v := range f.fields {
+		dest[k] = v
+	}
+}
 
-	// TODO: implement me
-	return nil
+func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, msg string, fields Fields) error {
+	if level < l.Level() {
+		return nil
+	}
+
+	now := time.Now().UTC() // get this early.
+
+	// TODO: build the message
+
+	// build the fields
+	f := make(map[string]any)
+	if parent := contextFields(ctx); parent != nil {
+		parent.merge(fields)
+	}
+	for k, v := range fields {
+		f[k] = v
+	}
+
+	if t, ok := f["time"]; ok {
+		f["field.time"] = t
+	}
+	f["time"] = now
+
+	if lv, ok := f["level"]; ok {
+		f["level"] = lv
+	}
+	f["level"] = level
+
+	if msg, ok := f["message"]; ok {
+		f["field.message"] = msg
+	}
+	f["message"] = msg
+
+	// TODO: cache buffer
+	buf, err := json.Marshal(f)
+	if err != nil {
+		return err
+	}
+	buf = append(buf, '\n')
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	_, err = l.out.Write(buf)
+	return err
 }
 
 func (l *Logger) Trace(ctx context.Context, msg string, fields Fields) {
