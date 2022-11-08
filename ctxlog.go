@@ -217,3 +217,48 @@ func (l *Logger) PanicContext(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelPanic, msg, fields)
 	panic(msg)
 }
+
+func Trace(ctx context.Context, msg string, fields Fields) {
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(ctx, 2, LevelTrace, msg, fields)
+}
+
+func Debug(ctx context.Context, msg string, fields Fields) {
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(ctx, 2, LevelDebug, msg, fields)
+}
+
+func Info(ctx context.Context, msg string, fields Fields) {
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(ctx, 2, LevelInfo, msg, fields)
+}
+
+func Warn(ctx context.Context, msg string, fields Fields) {
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(ctx, 2, LevelWarn, msg, fields)
+}
+
+func Error(ctx context.Context, msg string, fields Fields) {
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(ctx, 2, LevelError, msg, fields)
+}
+
+func FatalContext(ctx context.Context, msg string, fields Fields) {
+	std.OutputContext(ctx, 2, LevelFatal, msg, fields)
+	os.Exit(1)
+}
+
+func PanicContext(ctx context.Context, msg string, fields Fields) {
+	std.OutputContext(ctx, 2, LevelPanic, msg, fields)
+	panic(msg)
+}
