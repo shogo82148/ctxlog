@@ -1,10 +1,10 @@
 package ctxlog
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"os"
-	"sync"
-	"sync/atomic"
 )
 
 // compatible layer for the log package
@@ -20,63 +20,82 @@ const (
 	LstdFlags     = Ldate | Ltime // initial values for the standard logger
 )
 
-type Logger struct {
-	mu        sync.Mutex  // ensures atomic writes; protects the following fields
-	prefix    string      // prefix on each line to identify the logger (but see Lmsgprefix)
-	flag      int         // properties
-	out       io.Writer   // for accumulating text to write
-	isDiscard atomic.Bool // whether out == io.Discard
-}
-
-var std = New(os.Stderr, "", LstdFlags)
-
-// Default returns the standard logger used by the package-level output functions.
-func Default() *Logger { return std }
-
-func New(out io.Writer, prefix string, flag int) *Logger {
-	// TODO: implement me
-	return &Logger{out: out}
-}
-
 func (l *Logger) Output(calldepth int, s string) error {
-	// TODO: implement me
-	return nil
+	return l.OutputContext(context.Background(), calldepth+1, LevelNo, s, nil)
 }
 
+// Print calls l.OutputContext to print to the logger.
+// Arguments are handled in the manner of fmt.Print.
 func (l *Logger) Print(v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelNo, fmt.Sprint(v...), nil)
 }
 
+// Printf calls l.OutputContext to print to the logger.
+// Arguments are handled in the manner of fmt.Printf.
 func (l *Logger) Printf(format string, v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelNo, fmt.Sprintf(format, v...), nil)
 }
 
+// Println calls l.OutputContext to print to the logger.
+// Arguments are handled in the manner of fmt.Println.
 func (l *Logger) Println(v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelNo, fmt.Sprint(v...), nil)
 }
 
+// Fatal is equivalent to l.Print() followed by a call to os.Exit(1).
 func (l *Logger) Fatal(v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
+	os.Exit(1)
 }
 
+// Fatalf is equivalent to l.Printf() followed by a call to os.Exit(1).
 func (l *Logger) Fatalf(format string, v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprintf(format, v...), nil)
+	os.Exit(1)
 }
 
+// Fatalln is equivalent to l.Println() followed by a call to os.Exit(1).
 func (l *Logger) Fatalln(v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
+	os.Exit(1)
 }
 
+// Panic is equivalent to l.Print() followed by a call to panic().
 func (l *Logger) Panic(v ...any) {
-	// TODO: implement me
+	s := fmt.Sprint(v...)
+	l.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
+// Panicf is equivalent to l.Printf() followed by a call to panic().
 func (l *Logger) Panicf(format string, v ...any) {
-	// TODO: implement me
+	s := fmt.Sprintf(format, v...)
+	l.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
 func (l *Logger) Panicln(v ...any) {
-	// TODO: implement me
+	s := fmt.Sprintln(v...)
+	l.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
 func (l *Logger) Prefix() string {
@@ -97,17 +116,7 @@ func (l *Logger) SetFlags(flag int) {
 	// TODO: implement me
 }
 
-func (l *Logger) Writer() io.Writer {
-	// TODO: implement me
-	return l.out
-}
-
-func (l *Logger) SetOutput(w io.Writer) {
-	// TODO: implement me
-}
-
 func Output(calldepth int, s string) error {
-	// TODO: implement me
 	return nil
 }
 
