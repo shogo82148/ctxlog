@@ -56,8 +56,50 @@ func TestOutput(t *testing.T) {
 	}
 }
 
+func TestStackTrace(t *testing.T) {
+	buf := new(bytes.Buffer)
+	l := New(buf, "", Lshortfile)
+	l.Print("hello")
+
+	var got struct {
+		Time    string
+		Message string
+		Level   string
+		File    string
+		Line    int
+	}
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.File != "ctxlog_test.go" {
+		t.Errorf("unexpected file name: got %q, want \"ctxlog_test.go\"", got.File)
+	}
+	if got.Line == 0 {
+		t.Errorf("unexpected line number: %d", got.Line)
+	}
+}
+
+type blackhole struct{}
+
+// discard is same as io.Discard, but it avoids optimization to io.Discard.
+var discard = &blackhole{}
+
+func (b *blackhole) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func BenchmarkStackTrace(b *testing.B) {
+	const testString = "test"
+	l := New(discard, "", Lshortfile)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			l.Print(testString)
+		}
+	})
+}
+
 func BenchmarkFormatTime(b *testing.B) {
-	l := New(io.Discard, "", Ldate|Ltime|Lmicroseconds|LUTC)
+	l := New(discard, "", Ldate|Ltime|Lmicroseconds|LUTC)
 	now := time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC)
 	for i := 0; i < b.N; i++ {
 		l.formatTime(now)
@@ -66,20 +108,16 @@ func BenchmarkFormatTime(b *testing.B) {
 
 func BenchmarkPrintln(b *testing.B) {
 	const testString = "test"
-	var buf bytes.Buffer
-	l := New(&buf, "", LstdFlags)
+	l := New(discard, "", LstdFlags)
 	for i := 0; i < b.N; i++ {
-		buf.Reset()
 		l.Println(testString)
 	}
 }
 
 func BenchmarkPrintlnNoFlags(b *testing.B) {
 	const testString = "test"
-	var buf bytes.Buffer
-	l := New(&buf, "", 0)
+	l := New(discard, "", 0)
 	for i := 0; i < b.N; i++ {
-		buf.Reset()
 		l.Println(testString)
 	}
 }
@@ -96,10 +134,8 @@ func BenchmarkOutputFlag(b *testing.B) {
 	}
 
 	const testString = "test"
-	var buf bytes.Buffer
-	l := New(&buf, "", LstdFlags)
+	l := New(discard, "", LstdFlags)
 	for i := 0; i < b.N; i++ {
-		buf.Reset()
 		l.Info(ctx, testString, fields)
 	}
 }
