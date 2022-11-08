@@ -2,6 +2,7 @@ package ctxlog
 
 import (
 	"context"
+	"fmt"
 	"io"
 )
 
@@ -22,19 +23,31 @@ func (l *Logger) Output(calldepth int, s string) error {
 	return l.OutputContext(context.Background(), calldepth+1, LevelNo, s, nil)
 }
 
+// Print calls l.OutputContext to print to the logger.
+// Arguments are handled in the manner of fmt.Print.
 func (l *Logger) Print(v ...any) {
 	if l.isDiscard.Load() {
 		return
 	}
-	// TODO: implement me
+	l.OutputContext(context.Background(), 2, LevelNo, fmt.Sprint(v...), nil)
 }
 
+// Printf calls l.OutputContext to print to the logger.
+// Arguments are handled in the manner of fmt.Printf.
 func (l *Logger) Printf(format string, v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelNo, fmt.Sprintf(format, v...), nil)
 }
 
+// Println calls l.OutputContext to print to the logger.
+// Arguments are handled in the manner of fmt.Println.
 func (l *Logger) Println(v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelNo, fmt.Sprint(v...), nil)
 }
 
 func (l *Logger) Fatal(v ...any) {

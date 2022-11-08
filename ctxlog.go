@@ -111,7 +111,11 @@ func With(parent context.Context, fields Fields) context.Context {
 }
 
 func contextFields(ctx context.Context) *mergedFields {
-	return ctx.Value(keyFields).(*mergedFields)
+	f := ctx.Value(keyFields)
+	if f == nil {
+		return nil
+	}
+	return f.(*mergedFields)
 }
 
 func (f *mergedFields) merge(dest map[string]any) {
