@@ -2,7 +2,6 @@ package ctxlog
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"os"
 	"runtime"
@@ -73,6 +72,7 @@ type Logger struct {
 	out       io.Writer    // for accumulating text to write
 	isDiscard atomic.Bool  // whether out == io.Discard
 	level     Level
+	pool      sync.Pool
 }
 
 var std = New(os.Stderr, "", LstdFlags)
@@ -85,6 +85,11 @@ func New(out io.Writer, prefix string, flag int) *Logger {
 		out:    out,
 		prefix: prefix,
 		flag:   flag,
+		pool: sync.Pool{
+			New: func() any {
+				return new(encodeState)
+			},
+		},
 	}
 }
 
@@ -157,7 +162,9 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 
 	now := time.Now() // get this early.
 
-	// TODO: build the message
+	state := l.pool.Get().(*encodeState)
+	defer l.pool.Put(state)
+	state.Reset()
 
 	// build the fields
 	f := make(map[string]any)
@@ -170,23 +177,52 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 
 	if t, ok := f["time"]; ok {
 		f["field.time"] = t
+		delete(f, "time")
 	}
-	f["time"] = l.formatTime(now)
 
 	if lv, ok := f["level"]; ok {
 		f["level"] = lv
+		delete(f, "level")
 	}
-	f["level"] = level.String()
-
+	if v, ok := f["file"]; ok {
+		f["field.file"] = v
+		delete(f, "file")
+	}
+	if v, ok := f["line"]; ok {
+		f["field.line"] = v
+		delete(f, "line")
+	}
 	if msg, ok := f["message"]; ok {
 		f["field.message"] = msg
+		delete(f, "message")
 	}
+
+	state.WriteByte('{')
+
+	flags := l.Flags()
+	if flags&(Ldate|Ltime|Lmicroseconds) != 0 {
+		state.appendString("time")
+		state.WriteByte(':')
+		state.appendTime(flags, now)
+		state.WriteByte(',')
+	}
+
+	state.appendString("level")
+	state.WriteByte(':')
+	state.appendString(level.String())
+	state.WriteByte(',')
+
+	state.appendString("message")
+	state.WriteByte(':')
+	state.WriteByte('"')
 	if l.Flags()&Lmsgprefix == 0 {
-		msg = l.Prefix() + msg
+		state.appendRawString(l.Prefix())
+		state.appendRawString(msg)
 	} else {
-		msg = msg + l.Prefix()
+		state.appendRawString(msg)
+		state.appendRawString(l.Prefix())
 	}
-	f["message"] = msg
+	state.WriteByte('"')
 
 	// stack trace
 	if l.Flags()&(Lshortfile|Llongfile) != 0 {
@@ -206,83 +242,24 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 				file = short
 			}
 		}
-		if v, ok := f["file"]; ok {
-			f["field.file"] = v
-		}
-		if v, ok := f["line"]; ok {
-			f["field.line"] = v
-		}
-		f["file"] = file
-		f["line"] = line
+
+		state.WriteByte(',')
+		state.appendString("file")
+		state.WriteByte(':')
+		state.appendString(file)
+		state.WriteByte(',')
+		state.appendString("line")
+		state.WriteByte(':')
+		state.appendInt(int64(line))
 	}
 
-	// TODO: cache buffer
-	buf, err := json.Marshal(f)
-	if err != nil {
-		return err
-	}
-	buf = append(buf, '\n')
+	state.WriteByte('}')
+	state.WriteByte('\n')
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	_, err = l.out.Write(buf)
+	_, err := state.WriteTo(l.out)
 	return err
-}
-
-func (l *Logger) formatTime(t time.Time) string {
-	var buf [30]byte
-	var idx int
-
-	flag := l.Flags()
-	if flag&LUTC != 0 {
-		t = t.UTC()
-	}
-	if flag&Ldate != 0 {
-		year, month, day := t.Date()
-		buf[idx+0] = '0' + byte(year/1000)
-		buf[idx+1] = '0' + byte((year/100)%10)
-		buf[idx+2] = '0' + byte((year/10)%10)
-		buf[idx+3] = '0' + byte(year%10)
-		buf[idx+4] = '-'
-		buf[idx+5] = '0' + byte(month/10)
-		buf[idx+6] = '0' + byte(month%10)
-		buf[idx+7] = '-'
-		buf[idx+8] = '0' + byte(day/10)
-		buf[idx+9] = '0' + byte(day%10)
-		idx += 10
-	}
-	if flag&(Ltime|Lmicroseconds) != 0 {
-		if l.flag&Ldate != 0 {
-			buf[idx] = 'T'
-			idx++
-		}
-		hour, min, sec := t.Clock()
-		buf[idx+0] = '0' + byte(hour/10)
-		buf[idx+1] = '0' + byte(hour%10)
-		buf[idx+2] = ':'
-		buf[idx+3] = '0' + byte(min/10)
-		buf[idx+4] = '0' + byte(min%10)
-		buf[idx+5] = ':'
-		buf[idx+6] = '0' + byte(sec/10)
-		buf[idx+7] = '0' + byte(sec%10)
-		idx += 8
-		if flag&(Lmicroseconds) != 0 {
-			micro := t.Nanosecond() / 1000
-			buf[idx+0] = '.'
-			buf[idx+1] = '0' + byte(micro/100000)
-			buf[idx+2] = '0' + byte((micro/10000)%10)
-			buf[idx+3] = '0' + byte((micro/1000)%10)
-			buf[idx+4] = '0' + byte((micro/100)%10)
-			buf[idx+5] = '0' + byte((micro/10)%10)
-			buf[idx+6] = '0' + byte(micro%10)
-			idx += 7
-		}
-	}
-	if flag&LUTC != 0 {
-		buf[idx] = 'Z'
-		idx++
-	}
-	return string(buf[:idx])
 }
 
 func (l *Logger) Trace(ctx context.Context, msg string, fields Fields) {
