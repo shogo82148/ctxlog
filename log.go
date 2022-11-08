@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 )
 
 // compatible layer for the log package
@@ -50,28 +51,51 @@ func (l *Logger) Println(v ...any) {
 	l.OutputContext(context.Background(), 2, LevelNo, fmt.Sprint(v...), nil)
 }
 
+// Fatal is equivalent to l.Print() followed by a call to os.Exit(1).
 func (l *Logger) Fatal(v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
+	os.Exit(1)
 }
 
+// Fatalf is equivalent to l.Printf() followed by a call to os.Exit(1).
 func (l *Logger) Fatalf(format string, v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprintf(format, v...), nil)
+	os.Exit(1)
 }
 
+// Fatalln is equivalent to l.Println() followed by a call to os.Exit(1).
 func (l *Logger) Fatalln(v ...any) {
-	// TODO: implement me
+	if l.isDiscard.Load() {
+		return
+	}
+	l.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
+	os.Exit(1)
 }
 
+// Panic is equivalent to l.Print() followed by a call to panic().
 func (l *Logger) Panic(v ...any) {
-	// TODO: implement me
+	s := fmt.Sprint(v...)
+	l.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
+// Panicf is equivalent to l.Printf() followed by a call to panic().
 func (l *Logger) Panicf(format string, v ...any) {
-	// TODO: implement me
+	s := fmt.Sprintf(format, v...)
+	l.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
 func (l *Logger) Panicln(v ...any) {
-	// TODO: implement me
+	s := fmt.Sprintln(v...)
+	l.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
 func (l *Logger) Prefix() string {
@@ -93,7 +117,6 @@ func (l *Logger) SetFlags(flag int) {
 }
 
 func Output(calldepth int, s string) error {
-	// TODO: implement me
 	return nil
 }
 
