@@ -56,6 +56,29 @@ func TestOutput(t *testing.T) {
 	}
 }
 
+func TestStackTrace(t *testing.T) {
+	buf := new(bytes.Buffer)
+	l := New(buf, "", Lshortfile)
+	l.Print("hello")
+
+	var got struct {
+		Time    string
+		Message string
+		Level   string
+		File    string
+		Line    int
+	}
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.File != "ctxlog_test.go" {
+		t.Errorf("unexpected file name: got %q, want \"ctxlog_test.go\"", got.File)
+	}
+	if got.Line == 0 {
+		t.Errorf("unexpected line number: %d", got.Line)
+	}
+}
+
 func BenchmarkFormatTime(b *testing.B) {
 	l := New(io.Discard, "", Ldate|Ltime|Lmicroseconds|LUTC)
 	now := time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC)

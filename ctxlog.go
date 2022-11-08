@@ -194,9 +194,23 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 		if !ok {
 			file = "???"
 			line = 0
+		} else {
+			if l.flag&Lshortfile != 0 {
+				short := file
+				for i := len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						short = file[i+1:]
+						break
+					}
+				}
+				file = short
+			}
 		}
-		if v, ok := f["level"]; ok {
-			f["field.level"] = v
+		if v, ok := f["file"]; ok {
+			f["field.file"] = v
+		}
+		if v, ok := f["line"]; ok {
+			f["field.line"] = v
 		}
 		f["file"] = file
 		f["line"] = line
