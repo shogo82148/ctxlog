@@ -1,10 +1,8 @@
 package ctxlog
 
 import (
+	"context"
 	"io"
-	"os"
-	"sync"
-	"sync/atomic"
 )
 
 // compatible layer for the log package
@@ -20,30 +18,14 @@ const (
 	LstdFlags     = Ldate | Ltime // initial values for the standard logger
 )
 
-type Logger struct {
-	mu        sync.Mutex  // ensures atomic writes; protects the following fields
-	prefix    string      // prefix on each line to identify the logger (but see Lmsgprefix)
-	flag      int         // properties
-	out       io.Writer   // for accumulating text to write
-	isDiscard atomic.Bool // whether out == io.Discard
-}
-
-var std = New(os.Stderr, "", LstdFlags)
-
-// Default returns the standard logger used by the package-level output functions.
-func Default() *Logger { return std }
-
-func New(out io.Writer, prefix string, flag int) *Logger {
-	// TODO: implement me
-	return &Logger{out: out}
-}
-
 func (l *Logger) Output(calldepth int, s string) error {
-	// TODO: implement me
-	return nil
+	return l.OutputContext(context.Background(), calldepth+1, LevelNo, s, nil)
 }
 
 func (l *Logger) Print(v ...any) {
+	if l.isDiscard.Load() {
+		return
+	}
 	// TODO: implement me
 }
 
@@ -94,15 +76,6 @@ func (l *Logger) Flags() int {
 }
 
 func (l *Logger) SetFlags(flag int) {
-	// TODO: implement me
-}
-
-func (l *Logger) Writer() io.Writer {
-	// TODO: implement me
-	return l.out
-}
-
-func (l *Logger) SetOutput(w io.Writer) {
 	// TODO: implement me
 }
 
