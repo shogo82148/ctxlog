@@ -43,6 +43,28 @@ const (
 	// Values less than TraceLevel are handled as numbers.
 )
 
+func (lv Level) String() string {
+	switch lv {
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelFatal:
+		return "fatal"
+	case LevelPanic:
+		return "panic"
+	case LevelNo:
+		return "no"
+	case LevelDisabled:
+		return "disabled"
+	}
+	return "trace"
+}
+
 type Logger struct {
 	mu        sync.RWMutex // ensures atomic writes; protects the following fields
 	prefix    string       // prefix on each line to identify the logger (but see Lmsgprefix)
@@ -153,7 +175,7 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	if lv, ok := f["level"]; ok {
 		f["level"] = lv
 	}
-	f["level"] = level
+	f["level"] = level.String()
 
 	if msg, ok := f["message"]; ok {
 		f["field.message"] = msg

@@ -3,6 +3,7 @@ package ctxlog
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"testing"
 	"time"
@@ -44,8 +45,15 @@ func TestOutput(t *testing.T) {
 	buf := new(bytes.Buffer)
 	l := New(buf, "", LstdFlags)
 	l.Printf("hello %d world", 23)
-	line := buf.String()
-	t.Error(line)
+
+	var got struct {
+		Time    string
+		Message string
+		Level   string
+	}
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func BenchmarkFormatTime(b *testing.B) {
