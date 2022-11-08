@@ -162,7 +162,7 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	// build the fields
 	f := make(map[string]any)
 	if parent := contextFields(ctx); parent != nil {
-		parent.merge(fields)
+		parent.merge(f)
 	}
 	for k, v := range fields {
 		f[k] = v

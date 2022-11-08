@@ -139,3 +139,23 @@ func BenchmarkOutputFlag(b *testing.B) {
 		l.Info(ctx, testString, fields)
 	}
 }
+
+func BenchmarkOutputFlagParallel(b *testing.B) {
+	parent := map[string]any{
+		"parent": "hello",
+	}
+	ctx := With(context.Background(), parent)
+	fields := map[string]any{
+		"string":  "foobar",
+		"number":  42,
+		"boolean": true,
+	}
+
+	const testString = "test"
+	l := New(discard, "", LstdFlags)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			l.Info(ctx, testString, fields)
+		}
+	})
+}
