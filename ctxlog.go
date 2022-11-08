@@ -163,7 +163,9 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	if flags&(Ldate|Ltime|Lmicroseconds) != 0 {
 		state.appendString("time")
 		state.WriteByte(':')
+		state.WriteByte('"')
 		state.appendTime(flags, now)
+		state.WriteByte('"')
 		state.WriteByte(',')
 	}
 

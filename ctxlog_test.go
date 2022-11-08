@@ -51,6 +51,7 @@ func TestOutput(t *testing.T) {
 		Message string
 		Level   string
 	}
+	t.Log(buf.String())
 	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
