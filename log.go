@@ -116,69 +116,91 @@ func (l *Logger) SetFlags(flag int) {
 	// TODO: implement me
 }
 
+// Output writes the output for a logging event.
 func Output(calldepth int, s string) error {
-	return nil
+	return std.OutputContext(context.Background(), calldepth+1, LevelNo, s, nil) // +1 for this frame.
 }
 
+// Print calls Output to print to the standard logger.
+// Arguments are handled in the manner of fmt.Print.
 func Print(v ...any) {
-	// TODO: implement me
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(context.Background(), 2, LevelNo, fmt.Sprint(v...), nil)
 }
 
+// Printf calls Output to print to the standard logger.
+// Arguments are handled in the manner of fmt.Printf.
 func Printf(format string, v ...any) {
-	// TODO: implement me
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(context.Background(), 2, LevelNo, fmt.Sprintf(format, v...), nil)
 }
 
+// Println calls Output to print to the standard logger.
+// Arguments are handled in the manner of fmt.Println.
 func Println(v ...any) {
-	// TODO: implement me
+	if std.isDiscard.Load() {
+		return
+	}
+	std.OutputContext(context.Background(), 2, LevelNo, fmt.Sprintln(v...), nil)
 }
 
 func Fatal(v ...any) {
-	// TODO: implement me
+	std.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
+	os.Exit(1)
 }
 
 func Fatalf(format string, v ...any) {
-	// TODO: implement me
+	std.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprintf(format, v...), nil)
+	os.Exit(1)
 }
 
 func Fatalln(v ...any) {
-	// TODO: implement me
+	std.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
+	os.Exit(1)
 }
 
 func Panic(v ...any) {
-	// TODO: implement me
+	s := fmt.Sprint(v...)
+	std.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
 func Panicf(format string, v ...any) {
-	// TODO: implement me
+	s := fmt.Sprintf(format, v...)
+	std.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
 func Panicln(v ...any) {
-	// TODO: implement me
+	s := fmt.Sprintln(v...)
+	std.OutputContext(context.Background(), 2, LevelPanic, s, nil)
+	panic(s)
 }
 
 func Prefix() string {
-	// TODO: implement me
-	return ""
+	return std.Prefix()
 }
 
 func SetPrefix(prefix string) {
-	// TODO: implement me
+	std.SetPrefix(prefix)
 }
 
 func Flags() int {
-	// TODO: implement me
-	return 0
+	return std.Flags()
 }
 
 func SetFlags(flag int) {
-	// TODO: implement me
+	std.SetFlags(flag)
 }
 
 func Writer() io.Writer {
-	// TODO: implement me
-	return nil
+	return std.Writer()
 }
 
 func SetOutput(w io.Writer) {
-	// TODO: implement me
+	std.SetOutput(w)
 }
