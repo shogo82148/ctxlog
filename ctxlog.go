@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -180,7 +181,26 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	if msg, ok := f["message"]; ok {
 		f["field.message"] = msg
 	}
+	if l.Flags()&Lmsgprefix == 0 {
+		msg = l.Prefix() + msg
+	} else {
+		msg = msg + l.Prefix()
+	}
 	f["message"] = msg
+
+	// stack trace
+	if l.Flags()&(Lshortfile|Llongfile) != 0 {
+		_, file, line, ok := runtime.Caller(calldepth)
+		if !ok {
+			file = "???"
+			line = 0
+		}
+		if v, ok := f["level"]; ok {
+			f["field.level"] = v
+		}
+		f["file"] = file
+		f["line"] = line
+	}
 
 	// TODO: cache buffer
 	buf, err := json.Marshal(f)
