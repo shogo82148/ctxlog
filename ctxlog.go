@@ -87,7 +87,7 @@ func New(out io.Writer, prefix string, flag int) *Logger {
 		flag:   flag,
 		pool: sync.Pool{
 			New: func() any {
-				return new(encodeState)
+				return newEncodeState()
 			},
 		},
 	}

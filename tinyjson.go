@@ -25,6 +25,13 @@ type encodeState struct {
 	bytes.Buffer // accumulated output
 	scratch      [64]byte
 	kv           []keyValue
+	enc          *json.Encoder
+}
+
+func newEncodeState() *encodeState {
+	e := new(encodeState)
+	e.enc = json.NewEncoder(&e.Buffer)
+	return e
 }
 
 func (e *encodeState) appendRawString(v string) {
@@ -173,11 +180,9 @@ func (e *encodeState) appendAny(v any) error {
 	case bool:
 		e.appendBool(v)
 	default:
-		b, err := json.Marshal(v)
-		if err != nil {
+		if err := e.enc.Encode(v); err != nil {
 			return err
 		}
-		e.Write(b)
 	}
 	return nil
 }
