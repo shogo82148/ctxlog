@@ -106,7 +106,9 @@ func TestAppendAny(t *testing.T) {
 	e := newEncodeState()
 	for i, tt := range tests {
 		e.Reset()
-		e.appendAny(tt.in)
+		if err := e.appendAny(tt.in); err != nil {
+			t.Error(err)
+		}
 
 		got := e.String()
 		if got != tt.want {
