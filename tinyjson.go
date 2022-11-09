@@ -3,6 +3,8 @@ package ctxlog
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -125,6 +127,57 @@ func (e *encodeState) appendUint(v uint64) {
 	e.Write(b)
 }
 
+func (e *encodeState) appendFloat64(v float64) error {
+	if math.IsInf(v, 0) || math.IsNaN(v) {
+		return fmt.Errorf("ctxio: unsupported value: %g", v)
+	}
+
+	// Convert as if by ES6 number to string conversion.
+	// This matches most other JSON generators.
+	abs := math.Abs(v)
+	fmt := byte('f')
+	if abs != 0 && (abs < 1e-6 || abs >= 1e21) {
+		fmt = byte('e')
+	}
+	b := strconv.AppendFloat(e.scratch[:0], v, fmt, -1, 64)
+	if fmt == 'e' {
+		// clean up e-09 to e-9
+		n := len(b)
+		if n >= 4 && b[n-4] == 'e' && b[n-3] == '-' && b[n-2] == '0' {
+			b[n-2] = b[n-1]
+			b = b[:n-1]
+		}
+	}
+	e.Write(b)
+	return nil
+}
+
+func (e *encodeState) appendFloat32(v float32) error {
+	f := float64(v)
+	if math.IsInf(f, 0) || math.IsNaN(f) {
+		return fmt.Errorf("ctxio: unsupported value: %g", v)
+	}
+
+	// Convert as if by ES6 number to string conversion.
+	// This matches most other JSON generators.
+	abs := math.Abs(f)
+	fmt := byte('f')
+	if abs != 0 && (float32(abs) < 1e-6 || float32(abs) >= 1e21) {
+		fmt = byte('e')
+	}
+	b := strconv.AppendFloat(e.scratch[:0], f, fmt, -1, 32)
+	if fmt == 'e' {
+		// clean up e-09 to e-9
+		n := len(b)
+		if n >= 4 && b[n-4] == 'e' && b[n-3] == '-' && b[n-2] == '0' {
+			b[n-2] = b[n-1]
+			b = b[:n-1]
+		}
+	}
+	e.Write(b)
+	return nil
+}
+
 func (e *encodeState) appendTime(flags int, t time.Time) {
 	b := &e.scratch
 	var i int
@@ -206,6 +259,10 @@ func (e *encodeState) appendAny(v any) error {
 		e.appendString(v)
 	case bool:
 		e.appendBool(v)
+	case float32:
+		return e.appendFloat32(v)
+	case float64:
+		return e.appendFloat64(v)
 	default:
 		if err := e.enc.Encode(v); err != nil {
 			return err
