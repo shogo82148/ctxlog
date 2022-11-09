@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"testing"
 	"time"
 )
@@ -33,8 +32,9 @@ func TestFormatTime(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		l := New(io.Discard, "", tt.flag)
-		got := l.formatTime(tt.now)
+		e := new(encodeState)
+		e.appendTime(tt.flag, tt.now)
+		got := e.String()
 		if got != tt.want {
 			t.Errorf("%d: got %q, want %q", i, got, tt.want)
 		}
@@ -51,6 +51,7 @@ func TestOutput(t *testing.T) {
 		Message string
 		Level   string
 	}
+	t.Log(buf.String())
 	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
@@ -68,6 +69,7 @@ func TestStackTrace(t *testing.T) {
 		File    string
 		Line    int
 	}
+	t.Log(buf.String())
 	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
@@ -99,10 +101,11 @@ func BenchmarkStackTrace(b *testing.B) {
 }
 
 func BenchmarkFormatTime(b *testing.B) {
-	l := New(discard, "", Ldate|Ltime|Lmicroseconds|LUTC)
+	e := new(encodeState)
 	now := time.Date(2001, 2, 3, 4, 5, 6, 123456789, time.UTC)
 	for i := 0; i < b.N; i++ {
-		l.formatTime(now)
+		e.Reset()
+		e.appendTime(Ldate|Ltime|Lmicroseconds|LUTC, now)
 	}
 }
 
@@ -138,4 +141,24 @@ func BenchmarkOutputFlag(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		l.Info(ctx, testString, fields)
 	}
+}
+
+func BenchmarkOutputFlagParallel(b *testing.B) {
+	parent := map[string]any{
+		"parent": "hello",
+	}
+	ctx := With(context.Background(), parent)
+	fields := map[string]any{
+		"string":  "foobar",
+		"number":  42,
+		"boolean": true,
+	}
+
+	const testString = "test"
+	l := New(discard, "", LstdFlags)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			l.Info(ctx, testString, fields)
+		}
+	})
 }
