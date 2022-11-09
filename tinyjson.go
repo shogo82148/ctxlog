@@ -51,6 +51,7 @@ func newEncodeState() *encodeState {
 }
 
 func (e *encodeState) appendRawString(v string) {
+	const hex = "0123456789abcdef"
 	for _, c := range v {
 		switch c {
 		case '\\':
@@ -85,7 +86,17 @@ func (e *encodeState) appendRawString(v string) {
 			e.WriteString(`\u2029`)
 
 		default:
-			e.WriteRune(c)
+			if c < 0x20 {
+				// control characters
+				e.WriteByte('\\')
+				e.WriteByte('u')
+				e.WriteByte('0')
+				e.WriteByte('0')
+				e.WriteByte(hex[(c/0x10)%0x10])
+				e.WriteByte(hex[c%0x10])
+			} else {
+				e.WriteRune(c)
+			}
 		}
 	}
 }
