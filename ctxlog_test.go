@@ -57,6 +57,39 @@ func TestOutput(t *testing.T) {
 	}
 }
 
+func TestOutputFields(t *testing.T) {
+	buf := new(bytes.Buffer)
+	l := New(buf, "", LstdFlags)
+
+	parent := map[string]any{
+		"parent": "hello",
+	}
+	ctx := With(context.Background(), parent)
+	fields := map[string]any{
+		"string":  "foobar",
+		"number":  42,
+		"boolean": true,
+		"time":    "reserved",
+		"message": "reserved",
+		"file":    "reserved",
+		"line":    "reserved",
+	}
+	l.Info(ctx, "hoge", fields)
+
+	var got struct {
+		Time    string
+		Message string
+		Level   string
+	}
+	t.Log(buf.String())
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Message != "hoge" {
+		t.Errorf("got %q, want %q", got.Message, "hoge")
+	}
+}
+
 func TestStackTrace(t *testing.T) {
 	buf := new(bytes.Buffer)
 	l := New(buf, "", Lshortfile)
