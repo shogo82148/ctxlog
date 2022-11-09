@@ -146,6 +146,7 @@ func contextFields(ctx context.Context) *mergedFields {
 	return f.(*mergedFields)
 }
 
+// Output writes the output for a logging event.
 func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, msg string, fields Fields) error {
 	if level < l.Level() {
 		return nil
@@ -228,6 +229,7 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 	return err
 }
 
+// Trace writes the output for a trace level logging event.
 func (l *Logger) Trace(ctx context.Context, msg string, fields Fields) {
 	if l.isDiscard.Load() {
 		return
@@ -235,6 +237,7 @@ func (l *Logger) Trace(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelTrace, msg, fields)
 }
 
+// Debug writes the output for a debug level logging event.
 func (l *Logger) Debug(ctx context.Context, msg string, fields Fields) {
 	if l.isDiscard.Load() {
 		return
@@ -242,6 +245,7 @@ func (l *Logger) Debug(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelDebug, msg, fields)
 }
 
+// Info writes the output for an info level logging event.
 func (l *Logger) Info(ctx context.Context, msg string, fields Fields) {
 	if l.isDiscard.Load() {
 		return
@@ -249,6 +253,7 @@ func (l *Logger) Info(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelInfo, msg, fields)
 }
 
+// Warn writes the output for a warn level logging event.
 func (l *Logger) Warn(ctx context.Context, msg string, fields Fields) {
 	if l.isDiscard.Load() {
 		return
@@ -256,6 +261,7 @@ func (l *Logger) Warn(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelWarn, msg, fields)
 }
 
+// Error writes the output for an error level logging event.
 func (l *Logger) Error(ctx context.Context, msg string, fields Fields) {
 	if l.isDiscard.Load() {
 		return
@@ -263,16 +269,19 @@ func (l *Logger) Error(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelError, msg, fields)
 }
 
+// FatalContext writes the output for a fatal level logging event.
 func (l *Logger) FatalContext(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelFatal, msg, fields)
 	os.Exit(1)
 }
 
+// PanicContext writes the output for an panic level logging event.
 func (l *Logger) PanicContext(ctx context.Context, msg string, fields Fields) {
 	l.OutputContext(ctx, 2, LevelPanic, msg, fields)
 	panic(msg)
 }
 
+// Trace writes the output for a trace level logging event.
 func Trace(ctx context.Context, msg string, fields Fields) {
 	if std.isDiscard.Load() {
 		return
@@ -280,6 +289,7 @@ func Trace(ctx context.Context, msg string, fields Fields) {
 	std.OutputContext(ctx, 2, LevelTrace, msg, fields)
 }
 
+// Debug writes the output for a debug level logging event.
 func Debug(ctx context.Context, msg string, fields Fields) {
 	if std.isDiscard.Load() {
 		return
@@ -287,6 +297,7 @@ func Debug(ctx context.Context, msg string, fields Fields) {
 	std.OutputContext(ctx, 2, LevelDebug, msg, fields)
 }
 
+// Info writes the output for an info level logging event.
 func Info(ctx context.Context, msg string, fields Fields) {
 	if std.isDiscard.Load() {
 		return
@@ -294,6 +305,7 @@ func Info(ctx context.Context, msg string, fields Fields) {
 	std.OutputContext(ctx, 2, LevelInfo, msg, fields)
 }
 
+// Warn writes the output for a warn level logging event.
 func Warn(ctx context.Context, msg string, fields Fields) {
 	if std.isDiscard.Load() {
 		return
@@ -301,6 +313,7 @@ func Warn(ctx context.Context, msg string, fields Fields) {
 	std.OutputContext(ctx, 2, LevelWarn, msg, fields)
 }
 
+// Error writes the output for an error level logging event.
 func Error(ctx context.Context, msg string, fields Fields) {
 	if std.isDiscard.Load() {
 		return
@@ -308,11 +321,13 @@ func Error(ctx context.Context, msg string, fields Fields) {
 	std.OutputContext(ctx, 2, LevelError, msg, fields)
 }
 
+// FatalContext writes the output for a fatal level logging event.
 func FatalContext(ctx context.Context, msg string, fields Fields) {
 	std.OutputContext(ctx, 2, LevelFatal, msg, fields)
 	os.Exit(1)
 }
 
+// PanicContext writes the output for an panic level logging event.
 func PanicContext(ctx context.Context, msg string, fields Fields) {
 	std.OutputContext(ctx, 2, LevelPanic, msg, fields)
 	panic(msg)

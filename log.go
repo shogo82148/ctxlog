@@ -160,59 +160,71 @@ func Println(v ...any) {
 	std.OutputContext(context.Background(), 2, LevelNo, fmt.Sprintln(v...), nil)
 }
 
+// Fatal is equivalent to Print() followed by a call to os.Exit(1).
 func Fatal(v ...any) {
 	std.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
 	os.Exit(1)
 }
 
+// Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
 func Fatalf(format string, v ...any) {
 	std.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprintf(format, v...), nil)
 	os.Exit(1)
 }
 
+// Fatalln is equivalent to Println() followed by a call to os.Exit(1).
 func Fatalln(v ...any) {
 	std.OutputContext(context.Background(), 2, LevelFatal, fmt.Sprint(v...), nil)
 	os.Exit(1)
 }
 
+// Panic is equivalent to Print() followed by a call to panic().
 func Panic(v ...any) {
 	s := fmt.Sprint(v...)
 	std.OutputContext(context.Background(), 2, LevelPanic, s, nil)
 	panic(s)
 }
 
+// Panicf is equivalent to Printf() followed by a call to panic().
 func Panicf(format string, v ...any) {
 	s := fmt.Sprintf(format, v...)
 	std.OutputContext(context.Background(), 2, LevelPanic, s, nil)
 	panic(s)
 }
 
+// Panicln is equivalent to Println() followed by a call to panic().
 func Panicln(v ...any) {
 	s := fmt.Sprintln(v...)
 	std.OutputContext(context.Background(), 2, LevelPanic, s, nil)
 	panic(s)
 }
 
+// Prefix returns the output prefix for the standard logger.
 func Prefix() string {
 	return std.Prefix()
 }
 
+// SetPrefix sets the output prefix for the standard logger.
 func SetPrefix(prefix string) {
 	std.SetPrefix(prefix)
 }
 
+// Flags returns the output flags for the standard logger. The flag bits are Ldate, Ltime, and so on.
 func Flags() int {
 	return std.Flags()
 }
 
+// SetFlags sets the output flags for the standard logger. The flag bits are Ldate, Ltime, and so on.
 func SetFlags(flag int) {
 	std.SetFlags(flag)
 }
 
+// Writer returns the output destination for the standard logger.
 func Writer() io.Writer {
 	return std.Writer()
 }
 
+// SetOutput sets the output destination for the standard logger.
 func SetOutput(w io.Writer) {
 	std.SetOutput(w)
 }
