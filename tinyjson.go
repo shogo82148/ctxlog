@@ -182,7 +182,7 @@ func (e *encodeState) appendAny(v any) error {
 	return nil
 }
 
-func (e *encodeState) appendFields(parent *mergedFields, fields Fields) {
+func (e *encodeState) appendFields(parent *mergedFields, fields Fields) error {
 	kv := e.kv[:0]
 	for k, v := range fields {
 		kv = append(kv, keyValue{key: k, value: v})
@@ -210,12 +210,16 @@ func (e *encodeState) appendFields(parent *mergedFields, fields Fields) {
 		e.appendRawString(pair.key)
 		e.WriteByte('"')
 		e.WriteByte(':')
-		e.appendAny(pair.value)
+		if err := e.appendAny(pair.value); err != nil {
+			return err
+		}
 	}
 
 	// fill with nil for Garbage Collection
 	for i := range kv {
+		kv[i].key = ""
 		kv[i].value = nil
 	}
 	e.kv = kv
+	return nil
 }

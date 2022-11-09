@@ -215,7 +215,9 @@ func (l *Logger) OutputContext(ctx context.Context, calldepth int, level Level, 
 		state.appendInt(int64(line))
 	}
 
-	state.appendFields(contextFields(ctx), fields)
+	if err := state.appendFields(contextFields(ctx), fields); err != nil {
+		return err
+	}
 
 	state.WriteByte('}')
 	state.WriteByte('\n')
