@@ -21,6 +21,22 @@ type keyValue struct {
 	value any
 }
 
+type keyValues []keyValue
+
+var _ sort.Interface = keyValues(nil)
+
+func (s keyValues) Len() int {
+	return len(s)
+}
+
+func (s keyValues) Less(i, j int) bool {
+	return s[i].key < s[j].key
+}
+
+func (s keyValues) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 type encodeState struct {
 	bytes.Buffer // accumulated output
 	scratch      [64]byte
@@ -198,7 +214,7 @@ func (e *encodeState) appendFields(parent *mergedFields, fields Fields) error {
 		}
 		parent = parent.parent
 	}
-	sort.SliceStable(kv, func(i, j int) bool { return kv[i].key < kv[j].key })
+	sort.Stable(keyValues(kv))
 
 	for i, pair := range kv {
 		if i > 0 && kv[i-1].key == pair.key {
