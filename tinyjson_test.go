@@ -31,6 +31,14 @@ func TestString(t *testing.T) {
 			in:   "😎",
 			want: `"😎"`,
 		},
+		{
+			in:   "\u0000\u0001\u001a\u007f\u2028\u2029",
+			want: `"\u0000\u0001\u001a\u007f\u2028\u2029"`,
+		},
+		{
+			in:   "\x80",
+			want: `"�"`,
+		},
 	}
 
 	e := newEncodeState()
