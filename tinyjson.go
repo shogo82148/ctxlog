@@ -263,6 +263,20 @@ func (e *encodeState) appendAny(v any) error {
 		return e.appendFloat32(v)
 	case float64:
 		return e.appendFloat64(v)
+	case []any:
+		if v == nil {
+			e.WriteString("null")
+		} else if len(v) == 0 {
+			e.WriteString("[]")
+		} else {
+			e.WriteByte('[')
+			e.appendAny(v[0])
+			for _, vv := range v[1:] {
+				e.WriteByte(',')
+				e.appendAny(vv)
+			}
+			e.WriteByte(']')
+		}
 	default:
 		if err := e.enc.Encode(v); err != nil {
 			return err
