@@ -101,6 +101,14 @@ func TestAppendAny(t *testing.T) {
 			in:   math.Nextafter32(float32(1e-6), 0),
 			want: `9.999999e-7`,
 		},
+		{
+			in:   []any{},
+			want: `[]`,
+		},
+		{
+			in:   []any{"string", "array"},
+			want: `["string","array"]`,
+		},
 	}
 
 	e := newEncodeState()
