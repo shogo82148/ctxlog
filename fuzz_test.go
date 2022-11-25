@@ -57,7 +57,9 @@ func FuzzTinyJSON(f *testing.F) {
 
 		e := newEncodeState()
 		e.WriteString(`{"message":""`)
-		e.appendFields(&mergedFields{fields: Fields(parent)}, Fields(child))
+		if err := e.appendFields(&mergedFields{fields: Fields(parent)}, Fields(child)); err != nil {
+			t.Fatal(err)
+		}
 		e.WriteByte('}')
 		data := e.Bytes()
 
